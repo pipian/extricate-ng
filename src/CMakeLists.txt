@@ -1,0 +1,56 @@
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+SET(_sources extricate-ng.c)
+
+INCLUDE(CheckIncludeFiles)
+CHECK_INCLUDE_FILES(windows.h HAVE_WINDOWS_H)
+
+INCLUDE(CheckSymbolExists)
+CHECK_SYMBOL_EXISTS(_WIN32 windows.h OS_IS_WINDOWS)
+CHECK_SYMBOL_EXISTS(__FreeBSD__ sys/param.h OS_IS_FREEBSD)
+CHECK_SYMBOL_EXISTS(__APPLE__ sys/param.h OS_IS_DARWIN)
+CHECK_SYMBOL_EXISTS(linux sys/param.h OS_IS_LINUX)
+CHECK_SYMBOL_EXISTS(NULL stddef.h HAVE_NULL)
+
+IF(OS_IS_WINDOWS)
+    SET(_os_sources win32.c)
+ENDIF(OS_IS_WINDOWS)
+IF(OS_IS_FREEBSD)
+    SET(_os_sources freebsd.c)
+ENDIF(OS_IS_FREEBSD)
+IF(OS_IS_DARWIN)
+    SET(_os_sources darwin.c)
+ENDIF(OS_IS_DARWIN)
+IF(OS_IS_LINUX)
+    SET(_os_sources linux.c)
+ENDIF(OS_IS_LINUX)
+
+ADD_EXECUTABLE(extricate-ng ${_sources} ${_os_sources})
+
+# This should be fixed.
+SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /usr/local)
+FIND_LIBRARY(CUEIFY_LIBRARY cueify)
+FIND_PATH(CUEIFY_INCLUDE_DIR cueify)
+INCLUDE_DIRECTORIES(${CUEIFY_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(extricate-ng ${CUEIFY_LIBRARY})
+
+IF(OS_IS_FREEBSD)
+    TARGET_LINK_LIBRARIES(extricate-ng cam)
+ENDIF(OS_IS_FREEBSD)
+IF(OS_IS_DARWIN)
+    INCLUDE_DIRECTORIES(/Developer/Headers/FlatCarbon)
+    FIND_LIBRARY(CARBON_LIBRARY Carbon)
+    FIND_LIBRARY(IOKIT_LIBRARY IOKit)
+    FIND_LIBRARY(DISKARBITRATION_LIBRARY DiskArbitration)
+    MARK_AS_ADVANCED(CARBON_LIBRARY IOKIT_LIBRARY DISKARBITRATION_LIBRARY)
+    TARGET_LINK_LIBRARIES(extricate-ng ${CARBON_LIBRARY} ${IOKIT_LIBRARY}
+                                       ${DISKARBITRATION_LIBRARY})
+ENDIF(OS_IS_DARWIN)
+
+IF(CMAKE_COMPILER_IS_GNUCC)
+    # Unfortunately, libcam and w32api fail -pedantic-errors
+    # (and -isystem fails to help)
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -Werror -Wextra -std=gnu99 -pedantic")
+ENDIF(CMAKE_COMPILER_IS_GNUCC)
+
+INSTALL(PROGRAMS extricate-ng DESTINATION ${BIN_INSTALL_DIR})

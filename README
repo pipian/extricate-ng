@@ -1,0 +1,56 @@
+extricate-ng 0.1.0
+------------------
+
+extricate-ng is a program which provides for the ripping of data
+tracks from CDs, especially mixed-mode CDs with both audio and data
+tracks.  In this regard, it is inspired by extricate, by Thomas Schumm
+<phong@phong.org>
+
+USAGE:
+
+extricate-ng takes 0, 1, or 2 arguments, in the following order:
+
+extricate-ng [DEVICE [PREFIX]]
+
+where DEVICE is a name of the optical disc device to extract data
+tracks from (e.g. "/dev/cd0" on FreeBSD) which will fall back on an
+intelligent guess of the primary optical disc device, and PREFIX is a
+prefix to be prepended to the extracted data tracks.  By default,
+PREFIX is "disc".
+
+When run, extricate-ng will create a set of data files with names of
+the form prefixNN.iso and prefixNN.bin, where NN indicates the Nth
+data track on the disc.  ISO files having 2048-byte sectors will be
+created when a data track is a Mode 1 data track, or is a Mode 2 data
+track only containing frames using Form 1 (2048 bytes).  In all other
+cases (i.e. Mode 2 data tracks with at least one Form 2 frame), a BIN
+file will be created with 2336-byte sectors.
+
+BUILDING:
+
+extricate-ng requires:
+
+- cmake (>= 2.6) <http://www.cmake.org/>
+- libcueify <http://github.com/pipian/libcueify/>
+
+extricate-ng has been tested (and compiles) with the following configurations:
+
+- FreeBSD
+
+It likely requires little modification to work with Visual Studio directly.
+
+The Makefile (for use with GNU Make) included provides some simple
+targets to control building with cmake, including the targets you'd
+expect ("all", "install"), simply creating the subdirectory "build" to
+contain compiler output.  However, you may use cmake to generate the
+build directory somewhere other than a subdirectory named "build".
+Thus, simply invoking "make" will configure and compile extricate-ng.
+
+NOTES:
+
+Some calls in some OSs use SCSI pass-through logic, and as such, may
+misbehave on older drives which don't support the SCSI commands used
+(Specifically, READ TOC/PMA/ATIP with CD-Text support and READ CD with
+subchannel read support).  Furthermore, I have not tested this code
+with any IDE/ATAPI drives, so I am unsure whether these SCSI commands
+will work correctly with them either.
