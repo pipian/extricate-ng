@@ -1,6 +1,6 @@
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-SET(_sources extricate-ng.c)
+SET(_sources extricate-ng.c cdrom_crc.c)
 
 INCLUDE(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(windows.h HAVE_WINDOWS_H)

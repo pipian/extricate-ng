@@ -36,6 +36,7 @@
 #include <cueify/full_toc.h>
 #include <cueify/track_data.h>
 #include "device_private.h"
+#include "cdrom_crc.h"
 
 /**
  * Convert an MSF time address to an LBA absolute address.
@@ -179,6 +180,7 @@ int extricate(const char *device, const char *prefix) {
 		msf_to_lba(cueify_full_toc_get_track_address(t, i));
 	    uint8_t buffer[2352];
 	    uint16_t size;
+	    cdrom_crc_t crc;
 	    for (uint32_t j = 0;
 		 // No 150 sector adjustment, since this is duration
 		 j < msf_to_lba(cueify_full_toc_get_track_length(t, i)) + 150;
@@ -203,6 +205,17 @@ int extricate(const char *device, const char *prefix) {
 			/* Form 1 */
 			/* 16 + 8 byte header + subheader, followed by
 			 * 2048 data bytes */
+			crc = cdrom_crc_init();
+			crc = cdrom_crc_update(crc, buffer, 2056);
+			crc = cdrom_crc_finalize(crc);
+			if ((buffer[2056] != (crc & 0xFF)) ||
+			    (buffer[2057] != ((crc >> 8) & 0xFF)) ||
+			    (buffer[2058] != ((crc >> 16) & 0xFF)) ||
+			    (buffer[2059] != ((crc >> 24) & 0xFF))) {
+			    fprintf(stderr,
+				    "Bad CRC when reading track %02d\n", i);
+			    goto end_sector_loop;
+			}
 
 			/* Could be an ISO hiding in Mode 2 clothing. */
 			if (iso_fp != NULL &&
