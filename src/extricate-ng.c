@@ -86,9 +86,12 @@ size_t read_sector(cueify_device *d, uint32_t lba, uint8_t *buffer) {
     switch (data_mode) {
     case 0x01:
 	/* Mode 1 */
-	/* 16 byte header, followed by 2048 data bytes. */
-	memmove(buffer, buffer + 16, 2048);
-	return 2048;
+	/*
+	 * 16 byte header, followed by 2048 data bytes and 4 EDC bytes
+	 * which make use of the header and data.
+	 */
+	memmove(buffer, buffer, 2068);
+	return 2068;
     case 0x02:
 	/* Mode 2 */
 	/* 16 byte header, followed by (up to) 2336 data bytes. */
@@ -192,8 +195,21 @@ int extricate(const char *device, const char *prefix) {
 		switch (data_mode) {
 		case CUEIFY_DATA_MODE_MODE_1:
 		    /* Mode 1 */
+		    /* 2048 data bytes, but 16 byte header used by trailing 4 byte CRC */
+		    crc = cdrom_crc_init();
+		    crc = cdrom_crc_update(crc, buffer, 2064);
+		    crc = cdrom_crc_finalize(crc);
+		    if ((buffer[2064] != (crc & 0xFF)) ||
+			(buffer[2065] != ((crc >> 8) & 0xFF)) ||
+			(buffer[2066] != ((crc >> 16) & 0xFF)) ||
+			(buffer[2067] != ((crc >> 24) & 0xFF))) {
+			fprintf(stderr,
+				"Bad CRC when reading track %02d\n", i);
+			goto end_sector_loop;
+		    }
+
 		    /* Write the frame out to the ISO file. */
-		    if (fwrite(buffer, 1, size, iso_fp) != size) {
+		    if (fwrite(buffer, 1, 2048, iso_fp) != 2048) {
 			fprintf(stderr, "Unable to write track %02d\n", i);
 			goto end_sector_loop;
 		    }
