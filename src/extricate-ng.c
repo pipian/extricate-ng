@@ -209,7 +209,7 @@ int extricate(const char *device, const char *prefix) {
 		    }
 
 		    /* Write the frame out to the ISO file. */
-		    if (fwrite(buffer, 1, 2048, iso_fp) != 2048) {
+		    if (fwrite(buffer + 16, 1, 2048, iso_fp) != 2048) {
 			fprintf(stderr, "Unable to write track %02d\n", i);
 			goto end_sector_loop;
 		    }
